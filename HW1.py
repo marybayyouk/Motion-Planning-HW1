@@ -6,6 +6,7 @@ from typing import List, Tuple
 from Plotter import Plotter
 from shapely.geometry.polygon import Polygon, LineString
 
+
 def edge_angle(p1, p2):
     """Return the angle of the directed edge p1→p2."""
     return math.atan2(p2[1] - p1[1], p2[0] - p1[0])
@@ -33,7 +34,6 @@ def get_minkowsky_sum(original_shape: Polygon, r: float) -> Polygon:
                          polygon_sorted_vertices[i][1] + robot_sorted_vertices[j][1])
         minkowsky_points.append(current_point)
 
-        
         angle_polygon = edge_angle(polygon_sorted_vertices[i], polygon_sorted_vertices[i + 1])
         angle_robot = edge_angle(robot_sorted_vertices[j], robot_sorted_vertices[j + 1])
 
@@ -114,7 +114,58 @@ def sort_points_clockwise(points):
     return points[np.argsort(angles)]
 
 
-def dijkstra_shortest_path(visibility_graph: List[LineString], source: Tuple[float, float], dest: Tuple[float, float])
+def get_graph(visibility_graph: List[LineString]):
+    from math import dist
+    graph = {}
+    for edge in visibility_graph:
+        v1 = edge.coords[0]
+        v2 = edge.coords[-1]
+        weight = dist(v1, v2)
+        if v1 not in graph:
+            graph[v1] = {}
+        if v2 not in graph:
+            graph[v2] = {}
+        graph[v1][v2] = weight
+        graph[v2][v1] = weight
+    return graph
+
+
+def dijkstra_shortest_path(visibility_graph: List[LineString], source: Tuple[float, float], dest: Tuple[float, float]):
+    import heapq
+
+    graph = get_graph(visibility_graph)
+
+    queue = []
+    heapq.heapify(queue)
+    heapq.heappush(queue, (0.0, source))
+    dist_to = {source: 0.0}
+    parent = {source: None}
+
+    while queue:
+        curr_dist, u = heapq.heappop(queue)
+        if u == dest:
+            break
+        if curr_dist > dist_to[u]:
+            continue
+        for adj, weight in graph[u].items():
+            new_dist = curr_dist + weight
+            if adj not in dist_to or new_dist < dist_to[adj]:
+                dist_to[adj] = new_dist
+                parent[adj] = u
+                heapq.heappush(queue, (new_dist, adj))
+
+    if dest not in parent:
+        return None, math.inf
+
+    path = []
+    node = dest
+    while node is not None:
+        path.append(node)
+        node = parent[node]
+    path.reverse()
+
+    return path, dist_to[dest]
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -167,7 +218,7 @@ if __name__ == '__main__':
 
     lines = get_visibility_graph(c_space_obstacles, source, dest)
     #TODO: fill in the next line
-    shortest_path, cost = None, None
+    shortest_path, cost = dijkstra_shortest_path(lines, source, dest)
 
 
     # step 4: Animate the shortest path
