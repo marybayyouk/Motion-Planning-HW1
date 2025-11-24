@@ -9,7 +9,13 @@ from shapely.geometry.polygon import Polygon, LineString
 
 def edge_angle(p1, p2):
     """Return the angle of the directed edge p1→p2."""
-    return math.atan2(p2[1] - p1[1], p2[0] - p1[0])
+    # return math.atan2(p2[1] - p1[1], p2[0] - p1[0])
+    dx = p2[0] - p1[0]
+    dy = p2[1] - p1[1]
+    angle = math.atan2(dy, dx)
+    if angle < 0:
+        angle += 2 * math.pi
+    return angle
 
 
 # TODO
@@ -22,14 +28,23 @@ def get_minkowsky_sum(original_shape: Polygon, r: float) -> Polygon:
     """
 
     polygon_sorted_vertices = sort_points_clockwise(original_shape.exterior.coords)
-    robot_sorted_vertices = [(-r, 0), (0, r), (r, 0), (0, -r)]
-    
+    # polygon_sorted_vertices.reverse()
+    # polygon_sorted_vertices = [(0, 0), (1, 0), (1, 1), (0, 1)]
+    # print(polygon_sorted_vertices)
+    robot_sorted_vertices = [(0, -r), (r, 0), (0, r), (-r, 0)]
+
+    poly_len = len(polygon_sorted_vertices)
+    robot_len = len(robot_sorted_vertices)
+
     polygon_sorted_vertices.append(polygon_sorted_vertices[0])
-    robot_sorted_vertices.append(robot_sorted_vertices[0])  
+    # polygon_sorted_vertices.append(polygon_sorted_vertices[1])
+    robot_sorted_vertices.append(robot_sorted_vertices[0])
+    # robot_sorted_vertices.append(robot_sorted_vertices[1])
 
     minkowsky_points = []
+
     i, j = 0, 0
-    while i < len(polygon_sorted_vertices) - 1 or j < len(robot_sorted_vertices) - 1:
+    while i < poly_len and j < robot_len:
         current_point = (polygon_sorted_vertices[i][0] + robot_sorted_vertices[j][0],
                          polygon_sorted_vertices[i][1] + robot_sorted_vertices[j][1])
         minkowsky_points.append(current_point)
@@ -44,6 +59,18 @@ def get_minkowsky_sum(original_shape: Polygon, r: float) -> Polygon:
         else:
             i += 1
             j += 1
+
+    while i < poly_len:
+        p = polygon_sorted_vertices[i]
+        r_pt = robot_sorted_vertices[-1]
+        minkowsky_points.append((p[0] + r_pt[0], p[1] + r_pt[1]))
+        i += 1
+
+    while j < robot_len:
+        p = polygon_sorted_vertices[-1]
+        r_pt = robot_sorted_vertices[j]
+        minkowsky_points.append((p[0] + r_pt[0], p[1] + r_pt[1]))
+        j += 1
 
     return Polygon(minkowsky_points)
 
@@ -109,9 +136,11 @@ def get_points_and_dist(line):
 
 
 def sort_points_clockwise(points):
-    center = np.mean(points, axis=0)
-    angles = np.arctan2(points[:, 1] - center[1], points[:, 0] - center[0])
-    return points[np.argsort(angles)]
+    p = np.array(points)
+    center = np.mean(p, axis=0)
+    angles = np.arctan2(p[:, 1] - center[1], p[:, 0] - center[0])
+    sorted_points = p[np.argsort(angles)]
+    return [tuple(point) for point in sorted_points]
 
 
 def get_graph(visibility_graph: List[LineString]):
@@ -199,6 +228,7 @@ if __name__ == '__main__':
     plotter1.add_robot(source, dist)
 
     plotter1.show_graph()
+
 
     # step 2:
 
