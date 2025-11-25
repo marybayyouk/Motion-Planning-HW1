@@ -18,7 +18,6 @@ def edge_angle(p1, p2):
     return angle
 
 
-# TODO
 def get_minkowsky_sum(original_shape: Polygon, r: float) -> Polygon:
     """
     Get the polygon representing the Minkowsky sum
@@ -28,9 +27,6 @@ def get_minkowsky_sum(original_shape: Polygon, r: float) -> Polygon:
     """
 
     polygon_sorted_vertices = sort_points_clockwise(original_shape.exterior.coords)
-    # polygon_sorted_vertices.reverse()
-    # polygon_sorted_vertices = [(0, 0), (1, 0), (1, 1), (0, 1)]
-    # print(polygon_sorted_vertices)
     robot_sorted_vertices = [(0, -r), (r, 0), (0, r), (-r, 0)]
 
     poly_len = len(polygon_sorted_vertices)
@@ -83,7 +79,6 @@ def is_visible(obstacles, v1, v2):
     return True
 
 
-# TODO
 def get_visibility_graph(obstacles: List[Polygon], source=None, dest=None) -> List[LineString]:
     """
     Get The visibility graph of a given map
@@ -139,8 +134,12 @@ def sort_points_clockwise(points):
     p = np.array(points)
     center = np.mean(p, axis=0)
     angles = np.arctan2(p[:, 1] - center[1], p[:, 0] - center[0])
-    sorted_points = p[np.argsort(angles)]
-    return [tuple(point) for point in sorted_points]
+    sorted_idx = np.argsort(angles)
+    sorted_points = p[sorted_idx]
+    lowest_idx = np.lexsort((sorted_points[:, 0], sorted_points[:, 1]))[0]
+    reordered = np.concatenate((sorted_points[lowest_idx:], sorted_points[:lowest_idx]), axis=0)
+
+    return [tuple(pt) for pt in reordered]
 
 
 def get_graph(visibility_graph: List[LineString]):
@@ -229,9 +228,7 @@ if __name__ == '__main__':
 
     plotter1.show_graph()
 
-
     # step 2:
-
     lines = get_visibility_graph(c_space_obstacles)
     plotter2 = Plotter()
 
@@ -247,7 +244,6 @@ if __name__ == '__main__':
         dest = tuple(map(float, f.readline().split(',')))
 
     lines = get_visibility_graph(c_space_obstacles, source, dest)
-    #TODO: fill in the next line
     shortest_path, cost = dijkstra_shortest_path(lines, source, dest)
 
 
